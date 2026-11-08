@@ -24,3 +24,22 @@ Los mensajes están en `config-repo/`. Edita uno, reinicia el cliente correspond
 ## Siguiente etapa
 
 El servidor soporta el perfil `git`, configurable con las variables `CONFIG_BACKEND=git`, `CONFIG_GIT_URI` y opcionalmente `CONFIG_GIT_BRANCH` (por defecto `main`). Por defecto, busca los archivos dentro de la carpeta `config-repo` del repositorio Git; se puede cambiar con `CONFIG_GIT_SEARCH_PATHS`. Los clientes aceptan `CONFIG_SERVER_URL`. Falta configurar un repositorio remoto y verificar el despliegue.
+
+## Config Server en Render
+
+Crea un **Web Service** desde este repositorio y selecciona la rama `main`:
+
+- **Language:** Docker.
+- **Root Directory:** `config-server`.
+- **Dockerfile Path:** `./Dockerfile` (relativo a `config-server`).
+- **Docker Build Context Directory:** `.` (relativo a `config-server`, si se solicita).
+- **Instance Type:** Free, para la demostración.
+- **Environment Variables:**
+  - `CONFIG_BACKEND` = `git`
+  - `CONFIG_GIT_URI` = `https://github.com/xBiltTom/spring-cloud-config-MCEXP.git`
+
+El Dockerfile incluye el comando de inicio, por lo que no es necesario proporcionar otro. Render establece `PORT`; Spring Boot lo usa automáticamente. Las opciones `CONFIG_GIT_BRANCH=main` y `CONFIG_GIT_SEARCH_PATHS=config-repo` ya son los valores predeterminados.
+
+Una vez desplegado, abre `https://TU-SERVICIO.onrender.com/productos-service/default` y comprueba que `propertySources` contiene el mensaje de productos. Repite con `clientes-service` y `pedidos-service`. El plan gratuito puede tardar en responder si el servicio se ha detenido por inactividad. No coloques credenciales ni información privada en este repositorio público.
+
+Para conectar los microservicios a Render, configura `CONFIG_SERVER_URL` en cada terminal antes de iniciar el cliente. En Linux: `export CONFIG_SERVER_URL=https://TU-SERVICIO.onrender.com`; en PowerShell: `$env:CONFIG_SERVER_URL = "https://TU-SERVICIO.onrender.com"`. Después sigue los comandos de inicio de la tabla anterior. Comprueba las tres rutas `/mensaje` en localhost.
