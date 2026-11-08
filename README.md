@@ -23,4 +23,4 @@ Los mensajes están en `config-repo/`. Edita uno, reinicia el cliente correspond
 
 ## Siguiente etapa
 
-El servidor soporta el perfil `git`, configurable con las variables `CONFIG_BACKEND=git`, `CONFIG_GIT_URI` y opcionalmente `CONFIG_GIT_BRANCH` (por defecto `main`). Los clientes aceptan `CONFIG_SERVER_URL`. La integración Git y el despliegue se prepararán y verificarán en la siguiente etapa.
+El servidor soporta el perfil `git`, configurable con las variables `CONFIG_BACKEND=git`, `CONFIG_GIT_URI` y opcionalmente `CONFIG_GIT_BRANCH` (por defecto `main`). Por defecto, busca los archivos dentro de la carpeta `config-repo` del repositorio Git; se puede cambiar con `CONFIG_GIT_SEARCH_PATHS`. Los clientes aceptan `CONFIG_SERVER_URL`. Falta configurar un repositorio remoto y verificar el despliegue.
