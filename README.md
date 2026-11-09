@@ -23,15 +23,20 @@ Los mensajes están en `config-repo/`. Para detener cada aplicación usa `Ctrl+C
 
 ## Actualizar un mensaje automáticamente
 
-Los clientes revisan su configuración automáticamente con Spring Cloud cada 15 segundos y aplican los cambios al controlador de mensajes mediante `@RefreshScope`. No hace falta reiniciar el servicio ni ejecutar una petición de actualización.
+GitHub envía un webhook firmado al Config Server cuando se hace `push`. El servidor avisa por WebSocket a los clientes conectados; estos vuelven a leer su configuración y `@RefreshScope` actualiza los mensajes. No hay polling de Git ni hace falta reiniciar los servicios o ejecutar una petición manual. Un push de cualquier archivo o rama genera el aviso: cada cliente vuelve a consultar su propia configuración.
 
-1. Con los servicios en marcha, consulta el mensaje, por ejemplo `http://localhost:8081/mensaje` o `http://localhost:8080/productos/mensaje` si usas el Gateway.
-2. Edita la propiedad `mensaje` correspondiente en `config-repo/`. Si el Config Server está en Render, guarda el cambio mediante un commit en `main` de GitHub; en el modo local se lee el archivo local.
-3. Espera al siguiente ciclo (15 segundos por defecto, más el tiempo de consulta) y vuelve a consultar `/mensaje`. El nuevo valor también aparece por el Gateway.
+Para la demo con Render, configura una vez el webhook siguiendo la sección de abajo. Inicia los microservicios con `CONFIG_SERVER_URL` apuntando a ese servidor y espera en sus logs el mensaje `Conectado a eventos de configuración`. Cambia `mensaje` en un archivo de `config-repo/` y publica el commit en `main`. Al llegar el aviso, consulta `/mensaje` otra vez; el valor también se actualiza por el Gateway. La demora depende de GitHub, la red y Render.
 
-El intervalo se puede cambiar en cada cliente mediante `CONFIG_REFRESH_INTERVAL_MS`, expresado en milisegundos, antes de iniciarlo. Por ejemplo, `30000` equivale a 30 segundos. Cada revisión consulta al Config Server y puede hacer que este consulte GitHub; con el plan gratuito de Render las consultas periódicas mantienen activo el servicio mientras los clientes estén ejecutándose. Detén los clientes al terminar la demostración.
+Si se interrumpe el WebSocket, los clientes intentan reconectarse automáticamente y vuelven a consultar su configuración al reconectar, para recuperar cambios ocurridos durante la desconexión. También reintentan una recarga que falle. Cada conexión envía un mensaje de mantenimiento cada cuatro minutos: eso puede mantener activo el servicio gratuito de Render mientras haya clientes conectados. Detén los clientes al terminar la demo.
 
-Si falla una revisión, el cliente conserva la configuración cargada, registra el problema e intentará consultar de nuevo en el siguiente ciclo. El servicio necesita conectarse al Config Server durante su arranque.
+### Configurar el webhook de GitHub
+
+1. Genera una contraseña aleatoria larga para el webhook. Guárdala en un lugar seguro y **no la subas al repositorio**.
+2. En el servicio de Render, añade la variable `GITHUB_WEBHOOK_SECRET` con ese valor y despliega esta versión del Config Server.
+3. En el repositorio de GitHub, abre **Settings → Webhooks → Add webhook**. Usa como Payload URL `https://config-server-sem12.onrender.com/github-webhook`, Content type `application/json`, y el mismo secreto en Secret. Selecciona el evento **push**, activa el webhook y guárdalo.
+4. GitHub enviará un evento de prueba `ping`; la entrega debe responder HTTP `202`. Revisa **Recent Deliveries** si falla. No compartas el secreto.
+
+El endpoint rechaza las peticiones sin firma válida o sin secreto configurado. Los avisos WebSocket no contienen mensajes ni secretos. Render debe estar activo y el webhook debe poder llegar al servidor; en el plan gratuito puede tardar en despertar. Antes de demostrar un cambio, verifica la conexión de los tres clientes. Para pruebas locales sin publicar el servidor, un webhook de GitHub no puede alcanzar `localhost` por sí solo: se requiere un túnel o enviar un webhook de prueba firmado.
 
 ## Eureka y API Gateway con Config Server en Render
 
@@ -84,6 +89,7 @@ Crea un **Web Service** desde este repositorio y selecciona la rama `main`:
 - **Environment Variables:**
   - `CONFIG_BACKEND` = `git`
   - `CONFIG_GIT_URI` = `https://github.com/xBiltTom/spring-cloud-config-MCEXP.git`
+  - `GITHUB_WEBHOOK_SECRET` = el secreto que también configures en GitHub
 
 El Dockerfile incluye el comando de inicio, por lo que no es necesario proporcionar otro. Render establece `PORT`; Spring Boot lo usa automáticamente. Las opciones `CONFIG_GIT_BRANCH=main` y `CONFIG_GIT_SEARCH_PATHS=config-repo` ya son los valores predeterminados.
 
