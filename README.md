@@ -21,22 +21,17 @@ Visita `http://localhost:8888/productos-service/default` para consultar la confi
 
 Los mensajes están en `config-repo/`. Para detener cada aplicación usa `Ctrl+C` en su terminal.
 
-## Actualizar un mensaje sin reiniciar
+## Actualizar un mensaje automáticamente
 
-Cada cliente expone `POST /actuator/refresh` y su controlador de mensajes usa `@RefreshScope`. La actualización es manual y se aplica al cliente que recibe la petición; no ocurre automáticamente al guardar un commit.
+Los clientes revisan su configuración automáticamente con Spring Cloud cada 15 segundos y aplican los cambios al controlador de mensajes mediante `@RefreshScope`. No hace falta reiniciar el servicio ni ejecutar una petición de actualización.
 
 1. Con los servicios en marcha, consulta el mensaje, por ejemplo `http://localhost:8081/mensaje` o `http://localhost:8080/productos/mensaje` si usas el Gateway.
-2. Edita la propiedad `mensaje` correspondiente en `config-repo/`. Si el Config Server está en Render, publica el cambio mediante un commit en la rama `main` de GitHub; en el modo local se lee el archivo local.
-3. En otra terminal, pide la recarga al microservicio correspondiente (en PowerShell usa `curl.exe`):
+2. Edita la propiedad `mensaje` correspondiente en `config-repo/`. Si el Config Server está en Render, guarda el cambio mediante un commit en `main` de GitHub; en el modo local se lee el archivo local.
+3. Espera al siguiente ciclo (15 segundos por defecto, más el tiempo de consulta) y vuelve a consultar `/mensaje`. El nuevo valor también aparece por el Gateway.
 
-   ```bash
-   curl -X POST http://localhost:8081/actuator/refresh
-   ```
+El intervalo se puede cambiar en cada cliente mediante `CONFIG_REFRESH_INTERVAL_MS`, expresado en milisegundos, antes de iniciarlo. Por ejemplo, `30000` equivale a 30 segundos. Cada revisión consulta al Config Server y puede hacer que este consulte GitHub; con el plan gratuito de Render las consultas periódicas mantienen activo el servicio mientras los clientes estén ejecutándose. Detén los clientes al terminar la demostración.
 
-   Para clientes usa el puerto `8082`; para pedidos, `8083`. La respuesta puede incluir `["config.client.version","mensaje"]` u otras claves que hayan cambiado.
-4. Vuelve a consultar `/mensaje`: debe aparecer el valor nuevo sin reiniciar el servicio. Una vez recargado, también se verá por el Gateway.
-
-La petición de recarga puede tardar mientras se consulta Render y GitHub. El Config Server debe estar disponible y haber recogido el commit. Para esta demo, `refresh` es un endpoint de administración sin autenticación: úsalo solo en un entorno controlado y protégelo antes de desplegar los clientes públicamente.
+Si falla una revisión, el cliente conserva la configuración cargada, registra el problema e intentará consultar de nuevo en el siguiente ciclo. El servicio necesita conectarse al Config Server durante su arranque.
 
 ## Eureka y API Gateway con Config Server en Render
 
