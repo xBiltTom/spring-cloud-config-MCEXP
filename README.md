@@ -19,7 +19,24 @@ El repositorio incluye Maven Wrapper, por lo que no hace falta instalar Maven. P
 
 Visita `http://localhost:8888/productos-service/default` para consultar la configuración y luego `http://localhost:8081/mensaje`, `http://localhost:8082/mensaje` y `http://localhost:8083/mensaje` para ver cada respuesta.
 
-Los mensajes están en `config-repo/`. Edita uno, reinicia el cliente correspondiente y vuelve a consultar `/mensaje`. Para detener cada aplicación usa `Ctrl+C` en su terminal.
+Los mensajes están en `config-repo/`. Para detener cada aplicación usa `Ctrl+C` en su terminal.
+
+## Actualizar un mensaje sin reiniciar
+
+Cada cliente expone `POST /actuator/refresh` y su controlador de mensajes usa `@RefreshScope`. La actualización es manual y se aplica al cliente que recibe la petición; no ocurre automáticamente al guardar un commit.
+
+1. Con los servicios en marcha, consulta el mensaje, por ejemplo `http://localhost:8081/mensaje` o `http://localhost:8080/productos/mensaje` si usas el Gateway.
+2. Edita la propiedad `mensaje` correspondiente en `config-repo/`. Si el Config Server está en Render, publica el cambio mediante un commit en la rama `main` de GitHub; en el modo local se lee el archivo local.
+3. En otra terminal, pide la recarga al microservicio correspondiente (en PowerShell usa `curl.exe`):
+
+   ```bash
+   curl -X POST http://localhost:8081/actuator/refresh
+   ```
+
+   Para clientes usa el puerto `8082`; para pedidos, `8083`. La respuesta puede incluir `["config.client.version","mensaje"]` u otras claves que hayan cambiado.
+4. Vuelve a consultar `/mensaje`: debe aparecer el valor nuevo sin reiniciar el servicio. Una vez recargado, también se verá por el Gateway.
+
+La petición de recarga puede tardar mientras se consulta Render y GitHub. El Config Server debe estar disponible y haber recogido el commit. Para esta demo, `refresh` es un endpoint de administración sin autenticación: úsalo solo en un entorno controlado y protégelo antes de desplegar los clientes públicamente.
 
 ## Eureka y API Gateway con Config Server en Render
 
@@ -58,7 +75,7 @@ El Gateway quita el primer segmento de la ruta antes de reenviarla. Por ejemplo,
 
 ## Siguiente etapa
 
-El servidor soporta el perfil `git`, configurable con las variables `CONFIG_BACKEND=git`, `CONFIG_GIT_URI` y opcionalmente `CONFIG_GIT_BRANCH` (por defecto `main`). Por defecto, busca los archivos dentro de la carpeta `config-repo` del repositorio Git; se puede cambiar con `CONFIG_GIT_SEARCH_PATHS`. Los clientes aceptan `CONFIG_SERVER_URL`. Falta configurar un repositorio remoto y verificar el despliegue.
+El servidor soporta el perfil `git`, configurable con las variables `CONFIG_BACKEND=git`, `CONFIG_GIT_URI` y opcionalmente `CONFIG_GIT_BRANCH` (por defecto `main`). Por defecto, busca los archivos dentro de la carpeta `config-repo` del repositorio Git; se puede cambiar con `CONFIG_GIT_SEARCH_PATHS`. Los clientes aceptan `CONFIG_SERVER_URL`. El servidor de la demo está desplegado en Render y usa el repositorio remoto de GitHub.
 
 ## Config Server en Render
 
