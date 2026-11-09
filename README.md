@@ -1,6 +1,6 @@
 # Demo: Spring Cloud Config
 
-Cuatro aplicaciones Spring Boot: un servidor de configuración y tres clientes, sin base de datos. En esta primera etapa, el servidor lee archivos locales; luego se conectará a GitHub y se desplegará en Render.
+La demo incluye un Config Server, tres microservicios, un registro Eureka y un API Gateway. El Config Server puede leer archivos locales o consultar GitHub desde Render.
 
 ## Requisitos
 
@@ -8,7 +8,7 @@ Cuatro aplicaciones Spring Boot: un servidor de configuración y tres clientes, 
 - Internet para descargar dependencias la primera vez.
 - Puertos 8888, 8081, 8082 y 8083 libres.
 
-Cada proyecto incluye Maven Wrapper: no hace falta instalar Maven. Abre una terminal por aplicación **desde la carpeta raíz de este proyecto**. Arranca primero el servidor y espera a que indique que inició.
+El repositorio incluye Maven Wrapper, por lo que no hace falta instalar Maven. Para el modo local, abre una terminal por aplicación **desde la carpeta raíz del proyecto**. Arranca primero el Config Server y espera a que indique que inició.
 
 | Aplicación | Linux (bash) | Windows (PowerShell) |
 | --- | --- | --- |
@@ -20,6 +20,41 @@ Cada proyecto incluye Maven Wrapper: no hace falta instalar Maven. Abre una term
 Visita `http://localhost:8888/productos-service/default` para consultar la configuración y luego `http://localhost:8081/mensaje`, `http://localhost:8082/mensaje` y `http://localhost:8083/mensaje` para ver cada respuesta.
 
 Los mensajes están en `config-repo/`. Edita uno, reinicia el cliente correspondiente y vuelve a consultar `/mensaje`. Para detener cada aplicación usa `Ctrl+C` en su terminal.
+
+## Eureka y API Gateway con Config Server en Render
+
+Eureka registra las instancias de los microservicios en el puerto `8761`. El Gateway recibe las peticiones en el puerto `8080` y resuelve los destinos por nombre en Eureka. Los microservicios conservan sus puertos locales y cargan su configuración desde Render.
+
+1. Desde la raíz del repositorio, inicia Eureka en una terminal.
+
+   ```powershell
+   .\config-server\mvnw.cmd -f eureka-server/pom.xml spring-boot:run
+   ```
+
+2. Abre una terminal por microservicio. Define estas variables en cada terminal y usa el comando de inicio correspondiente de la tabla anterior.
+
+   ```powershell
+   $env:CONFIG_SERVER_URL = 'https://config-server-sem12.onrender.com'
+   $env:EUREKA_ENABLED = 'true'
+   ```
+
+3. Inicia el Gateway desde la raíz, en otra terminal.
+
+   ```powershell
+   .\config-server\mvnw.cmd -f api-gateway/pom.xml spring-boot:run
+   ```
+
+En Bash, usa `./config-server/mvnw` para los módulos nuevos y `export` para definir las variables.
+
+Cuando el [panel de Eureka](http://localhost:8761/) muestre las tres instancias, prueba las rutas del Gateway. La propagación del registro puede tardar unos segundos.
+
+| Servicio | Ruta por el Gateway |
+| --- | --- |
+| Productos | [http://localhost:8080/productos/mensaje](http://localhost:8080/productos/mensaje) |
+| Clientes | [http://localhost:8080/clientes/mensaje](http://localhost:8080/clientes/mensaje) |
+| Pedidos | [http://localhost:8080/pedidos/mensaje](http://localhost:8080/pedidos/mensaje) |
+
+El Gateway quita el primer segmento de la ruta antes de reenviarla. Por ejemplo, `/productos/mensaje` llega como `/mensaje` a `productos-service`. Puedes cambiar la URL del registro con `EUREKA_SERVER_URL` en el Gateway y en los microservicios. En modo local con Eureka también puedes usar el Config Server del puerto `8888` dejando `CONFIG_SERVER_URL` sin definir.
 
 ## Siguiente etapa
 

@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: productos
+              uri: lb://productos-service
+              predicates:
+                - Path=/productos/**
+              filters:
+                - StripPrefix=1
+            - id: clientes
+              uri: lb://clientes-service
+              predicates:
+                - Path=/clientes/**
+              filters:
+                - StripPrefix=1
+            - id: pedidos
+              uri: lb://pedidos-service
+              predicates:
+                - Path=/pedidos/**
+              filters:
+                - StripPrefix=1
+
+server:
+  address: 127.0.0.1
+  port: 8080
+
+eureka:
+  client:
+    register-with-eureka: false
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://127.0.0.1:8761/eureka/}
